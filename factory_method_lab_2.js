@@ -4,6 +4,7 @@
 class SocialNetwork{
     constructor(){
         if(this.constructor.name === SocialNetwork){
+            // Заборона створювати екземпляр абстрактного класу
             throw new Error('Can not instantiate abstract class SocialNetwork');
         }
     }
