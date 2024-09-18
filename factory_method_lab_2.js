@@ -4,16 +4,16 @@
 class SocialNetwork{
     constructor(){
         if(this.constructor.name === SocialNetwork){
-            throw new Error("Cannot instantiate abstract class SocialNetwork");
+            throw new Error('Can not instantiate abstract class SocialNetwork');
         }
     }
 
     login(){
-        throw new Error("login()");
+        throw new Error('The method login() get changed');
     }
 
     post(message){
-        throw new Error("post()");
+        throw new Error('The method post() get changed');
     }
 }
 
