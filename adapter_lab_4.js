@@ -1,3 +1,5 @@
+// Adapter Lab 4
+
 // "Інтерфейс" Notification у JavaScript
 class Notification {
     send(title, message) {
