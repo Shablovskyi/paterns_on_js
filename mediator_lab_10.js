@@ -1,78 +1,184 @@
-// Компонент Посередник
-class OrderMediator {
+// Клас Посередник
+class CheckoutMediator {
   constructor() {
-    this.deliveryDate = null;
-    this.timeSlots = [];
-    this.isSelfPickup = false;
-    this.isOtherRecipient = false;
-    this.recipientName = null;
-    this.recipientPhone = null;
+    this.components = {};
   }
 
-  setDeliveryDate(date) {
-    this.deliveryDate = date;
-    console.log(`Дата доставки встановлена на: ${date}`);
-    this.updateTimeSlots();
+  // Реєстрація компонентів у посереднику
+  register(name, component) {
+    this.components[name] = component;
+    component.setMediator(this);
   }
 
-  updateTimeSlots() {
-    // Логіка оновлення доступних проміжків часу залежно від дати
-    if (this.deliveryDate === 'tomorrow') {
-      this.timeSlots = ['10:00-12:00', '12:00-14:00'];
-    } else {
-      this.timeSlots = ['14:00-16:00', '16:00-18:00'];
-    }
-    console.log(`Доступні проміжки часу для доставки: ${this.timeSlots.join(', ')}`);
-  }
-
-  toggleSelfPickup(isSelfPickup) {
-    this.isSelfPickup = isSelfPickup;
-    console.log(`Самовивіз: ${isSelfPickup ? 'активовано' : 'деактивовано'}`);
-    this.updateFormState();
-  }
-
-  toggleOtherRecipient(isOtherRecipient) {
-    this.isOtherRecipient = isOtherRecipient;
-    console.log(`Отримувач інша особа: ${isOtherRecipient ? 'так' : 'ні'}`);
-    this.updateRecipientFields();
-  }
-
-  setRecipientName(name) {
-    this.recipientName = name;
-    console.log(`Ім'я отримувача: ${name}`);
-  }
-
-  setRecipientPhone(phone) {
-    this.recipientPhone = phone;
-    console.log(`Телефон отримувача: ${phone}`);
-  }
-
-  updateFormState() {
-    // Вимикаємо поля доставки, якщо обраний самовивіз
-    if (this.isSelfPickup) {
-      console.log("Всі поля, що стосуються доставки, стали неактивними.");
-    } else {
-      console.log("Поля доставки активовані.");
-    }
-  }
-
-  updateRecipientFields() {
-    if (this.isOtherRecipient) {
-      console.log("Поля 'Ім'я' та 'Телефон' для іншого отримувача стали видимими і обов'язковими.");
-    } else {
-      console.log("Поля 'Ім'я' та 'Телефон' для іншого отримувача приховані.");
+  // Метод посередника для управління взаємодією між компонентами
+  notify(sender, event) {
+    switch (event) {
+      case "dateChanged":
+        this.components["timeField"].updateAvailableTimeSlots(this.components["dateField"].getDate());
+        break;
+      case "recipientChanged":
+        this.components["recipientFields"].toggleFields(this.components["recipientCheckbox"].isChecked());
+        break;
+      case "pickupChanged":
+        const isPickup = this.components["pickupCheckbox"].isChecked();
+        this.components["dateField"].setDisabled(isPickup);
+        this.components["timeField"].setDisabled(isPickup);
+        this.components["recipientCheckbox"].setDisabled(isPickup);
+        this.components["recipientFields"].toggleFields(!isPickup && this.components["recipientCheckbox"].isChecked());
+        break;
     }
   }
 }
 
-// Ініціалізація посередника та обробка подій
-const orderMediator = new OrderMediator();
+// Клас для поля з датою
+class DateField {
+  constructor() {
+    this.date = null;
+    this.disabled = false;
+  }
 
-// Приклади викликів, щоб показати роботу посередника в консолі
-orderMediator.setDeliveryDate('tomorrow');
-orderMediator.toggleSelfPickup(true);
-orderMediator.toggleSelfPickup(false);
-orderMediator.toggleOtherRecipient(true);
-orderMediator.setRecipientName('Олексій');
-orderMediator.setRecipientPhone('+380123456789');
-orderMediator.toggleOtherRecipient(false);
+  setMediator(mediator) {
+    this.mediator = mediator;
+  }
+
+  setDate(date) {
+    if (!this.disabled) {
+      this.date = date;
+      console.log(`Дата встановлена: ${this.date}`);
+      this.mediator.notify(this, "dateChanged");
+    }
+  }
+
+  getDate() {
+    return this.date;
+  }
+
+  setDisabled(isDisabled) {
+    this.disabled = isDisabled;
+    console.log(`Поле дати ${isDisabled ? "вимкнено" : "увімкнено"}`);
+  }
+}
+
+// Клас для поля з часом
+class TimeField {
+  constructor() {
+    this.timeSlots = [];
+    this.disabled = false;
+  }
+
+  setMediator(mediator) {
+    this.mediator = mediator;
+  }
+
+  updateAvailableTimeSlots(date) {
+    this.timeSlots = this.getTimeSlotsForDate(date);
+    console.log(`Доступні часові проміжки для ${date}: ${this.timeSlots.join(", ")}`);
+  }
+
+  getTimeSlotsForDate(date) {
+    const timeSlots = {
+      "2024-11-05": ["10:00 - 12:00", "14:00 - 16:00"],
+      "2024-11-06": ["12:00 - 14:00", "16:00 - 18:00"],
+      "default": ["9:00 - 11:00", "13:00 - 15:00", "17:00 - 19:00"]
+    };
+    return timeSlots[date] || timeSlots["default"];
+  }
+
+  setDisabled(isDisabled) {
+    this.disabled = isDisabled;
+    console.log(`Поле часу ${isDisabled ? "вимкнено" : "увімкнено"}`);
+  }
+}
+
+// Клас для чекбокса іншого отримувача
+class RecipientCheckbox {
+  constructor() {
+    this.checked = false;
+    this.disabled = false;
+  }
+
+  setMediator(mediator) {
+    this.mediator = mediator;
+  }
+
+  setChecked(isChecked) {
+    if (!this.disabled) {
+      this.checked = isChecked;
+      console.log(`Чекбокс "отримувач інша особа" встановлено: ${isChecked}`);
+      this.mediator.notify(this, "recipientChanged");
+    }
+  }
+
+  isChecked() {
+    return this.checked;
+  }
+
+  setDisabled(isDisabled) {
+    this.disabled = isDisabled;
+    console.log(`Чекбокс "отримувач інша особа" ${isDisabled ? "вимкнено" : "увімкнено"}`);
+  }
+}
+
+// Клас для полів іншого отримувача (Ім'я та Телефон)
+class RecipientFields {
+  constructor() {
+    this.name = "";
+    this.phone = "";
+    this.required = false;
+    this.disabled = true;
+  }
+
+  setMediator(mediator) {
+    this.mediator = mediator;
+  }
+
+  toggleFields(isVisible) {
+    this.required = isVisible;
+    this.disabled = !isVisible;
+    console.log(`Поля для іншого отримувача ${isVisible ? "активні та обов'язкові" : "неактивні"}`);
+  }
+}
+
+// Клас для чекбокса самовивозу
+class PickupCheckbox {
+  constructor() {
+    this.checked = false;
+  }
+
+  setMediator(mediator) {
+    this.mediator = mediator;
+  }
+
+  setChecked(isChecked) {
+    this.checked = isChecked;
+    console.log(`Чекбокс "самовивіз" встановлено: ${isChecked}`);
+    this.mediator.notify(this, "pickupChanged");
+  }
+
+  isChecked() {
+    return this.checked;
+  }
+}
+
+// Ініціалізація компонентів та посередника
+const mediator = new CheckoutMediator();
+
+const dateField = new DateField();
+const timeField = new TimeField();
+const recipientCheckbox = new RecipientCheckbox();
+const recipientFields = new RecipientFields();
+const pickupCheckbox = new PickupCheckbox();
+
+// Реєстрація компонентів у посереднику
+mediator.register("dateField", dateField);
+mediator.register("timeField", timeField);
+mediator.register("recipientCheckbox", recipientCheckbox);
+mediator.register("recipientFields", recipientFields);
+mediator.register("pickupCheckbox", pickupCheckbox);
+
+// Демонстрація взаємодії
+dateField.setDate("2024-11-05");
+recipientCheckbox.setChecked(true);
+pickupCheckbox.setChecked(true);
+pickupCheckbox.setChecked(false); // Вимкнення самовивозу, що знову активує доставку
+dateField.setDate("2024-11-06");
